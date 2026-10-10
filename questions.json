@@ -1,0 +1,43 @@
+{
+  "read": [
+    { "id": "r1", "text": "Welcome aboard Flight 208 to Singapore. Please make sure your seat belt is fastened and your tray table is stowed. Our flight time today is approximately six hours, and we will serve a hot meal about one hour after takeoff. If you need any assistance, please press the call button above your seat." },
+    { "id": "r2", "text": "Thank you for visiting the Riverside Science Museum. Today's special exhibit on renewable energy is located on the second floor and will run until the end of next month. Guided tours begin every hour, and tickets can be purchased at the front desk. Please remember that flash photography is not permitted inside the exhibit." },
+    { "id": "r3", "text": "Good morning, everyone. Before we begin today's meeting, I would like to remind you that the quarterly sales report is due this Friday. Please send your completed files to the finance team by noon. If you have any questions about the new template, feel free to contact me directly." },
+    { "id": "r4", "text": "Attention, shoppers. Our annual summer sale starts tomorrow at nine o'clock. All clothing and shoes will be discounted by up to fifty percent. Members of our rewards program can enter the store thirty minutes early. We look forward to seeing you." }
+  ],
+  "respond": [
+    {
+      "id": "s1",
+      "topic": "Shopping online",
+      "questions": [
+        "How often do you shop online?",
+        "What kinds of products do you usually buy on the internet?",
+        "Some people say shopping online is better than shopping in stores. What do you think? Why?"
+      ]
+    },
+    {
+      "id": "s2",
+      "topic": "Public transportation",
+      "questions": [
+        "How do you usually get to work or school?",
+        "What is the most difficult thing about commuting in your city?",
+        "Do you think cities should invest more money in public transportation? Why or why not?"
+      ]
+    },
+    {
+      "id": "s3",
+      "topic": "Free time",
+      "questions": [
+        "What do you usually do on weekends?",
+        "Who do you usually spend your free time with?",
+        "Would you rather spend your free time at home or go outside? Why?"
+      ]
+    }
+  ],
+  "opinion": [
+    { "id": "o1", "text": "Some people prefer to work from home, while others prefer to work in an office. Which do you prefer? Give reasons and examples to support your opinion." },
+    { "id": "o2", "text": "Do you agree or disagree with the following statement? It is better to learn a foreign language by living in the country where it is spoken than by studying in a classroom. Give reasons for your answer." },
+    { "id": "o3", "text": "Some companies allow employees to choose their own working hours. Do you think this is a good idea? Explain why or why not." },
+    { "id": "o4", "text": "What is the most important quality of a good manager? Use specific reasons and examples to support your answer." }
+  ]
+}
