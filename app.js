@@ -293,6 +293,44 @@ function finishSession() {
 
 // ---------- 결과 검토 ----------
 
+function buildAudioPrompt(entries) {
+  const list = entries.map((e) => [
+    `- ${e.no} (${TITLE[e.kind]}, ${e.seconds}초)${e.context ? ` ${e.context}` : ''}`,
+    `  문항: ${e.prompt}`,
+  ].join('\n')).join('\n');
+  return [
+    '첨부한 오디오 파일들은 TOEIC Speaking 연습 답변이야. 파일명(q5, q6 ...)이 문항 번호야.',
+    '각 답변을 직접 듣고 발음·억양·강세, 유창성, 문법, 어휘, 내용 완결성 기준으로 평가해줘.',
+    '문항별 점수(0-3 또는 0-5, 기준을 명시)와 0-200 환산 추정 점수, 고칠 점 3가지, 모범 답안을 줘.',
+    '',
+    '문항 목록:',
+    list,
+  ].join('\n');
+}
+
+function audioFiles(results) {
+  return results.map((r) => {
+    const ext = r.mime.includes('mp4') ? 'm4a' : r.mime.includes('ogg') ? 'ogg' : 'webm';
+    return new File([r.blob], `${r.no.toLowerCase()}.${ext}`, { type: r.mime.split(';')[0] });
+  });
+}
+
+async function shareToGemini(results, btn) {
+  const text = buildAudioPrompt(results);
+  const files = audioFiles(results);
+  await copyText(text);
+  if (navigator.canShare?.({ files })) {
+    try {
+      await navigator.share({ files, text, title: 'TOEIC Speaking 연습' });
+      btn.textContent = '공유 시트에서 Gemini를 선택했다면, 채점 문구는 클립보드에도 복사돼 있어요';
+      return;
+    } catch (e) {
+      if (e.name === 'AbortError') return;
+    }
+  }
+  btn.textContent = '이 기기는 파일 공유를 지원하지 않아요. 문구는 복사됨 (녹음 파일은 각 플레이어의 ⋮ 메뉴에서 다운로드)';
+}
+
 function buildScoringPrompt(entries) {
   const body = entries.map((e) => [
     `[${e.no} ${TITLE[e.kind]}]`,
@@ -348,14 +386,16 @@ function reviewView() {
       ta,
     );
   });
-  const copyBtn = h('button', { class: 'btn primary', onclick: async () => {
+  const copyBtn = h('button', { class: 'btn ghost', onclick: async () => {
     const ok = await copyText(buildScoringPrompt(results));
     copyBtn.textContent = ok ? '복사됨. AI 앱에 붙여넣으세요' : '복사 실패';
-  } }, '채점 요청 문구 복사');
+  } }, '텍스트만 채점 요청 (문구 복사)');
+  const shareBtn = h('button', { class: 'btn primary', onclick: () => shareToGemini(results, shareBtn) }, '녹음을 Gemini 앱으로 보내 채점');
   mount(
     h('h1', null, '결과'),
     h('p', { class: 'meta' }, '녹음은 이 화면을 벗어나면 사라집니다. 답변 텍스트는 기록에 남습니다.'),
     cards,
+    shareBtn,
     copyBtn,
     h('button', { class: 'btn ghost', onclick: home }, '홈으로'),
   );
