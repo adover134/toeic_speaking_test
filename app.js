@@ -98,9 +98,14 @@ function releaseScreen() {
 // ---------- 홈 ----------
 
 function home() {
+  const top = topErrors();
   const menu = (title, sub, kind) => h('button', { class: 'btn', onclick: () => startSession(kind) }, title, h('small', null, sub));
   mount(
     h('h1', null, '토익 스피킹 연습'),
+    top.length > 0 && h('div', { class: 'card' },
+      h('div', { class: 'meta' }, '내가 자주 틀리는 문법 (최근 10세션)'),
+      top.map(([k, v]) => h('div', { class: 'hist' }, h('span', null, k), h('span', null, `${v}회`))),
+    ),
     h('h2', null, '연습 시작'),
     menu('모의 세트', '지문 읽기 2 · 질문 3 · 의견 1 (약 8분)', 'mock'),
     menu('지문 읽기 (Q1-2)', '준비 45초 / 답변 45초', 'read'),
@@ -293,6 +298,16 @@ function finishSession() {
 
 // ---------- 결과 검토 ----------
 
+const ERR_TYPES = ['시제', '관사', '수일치', '전치사', '어순', '대명사', '문장연결', '단어형태', '기타'];
+const ERR_INSTR = [
+  '고칠 점은 가장 반복될 가능성이 높은 문법 오류 유형을 첫째로 설명해줘.',
+  `답변 맨 끝에 아래 형식의 집계 블록을 붙여줘. 유형은 이 목록에서만 골라 쓰고(${ERR_TYPES.join(', ')}), 이번 답변들에서 나온 문법 오류 횟수를 세어줘. 오류가 없는 유형은 생략해.`,
+  '[오류집계]',
+  '시제: 2',
+  '관사: 1',
+  '[/오류집계]',
+];
+
 function buildAudioPrompt(entries) {
   const list = entries.map((e) => [
     `- ${e.no} (${TITLE[e.kind]}, ${e.seconds}초)${e.context ? ` ${e.context}` : ''}`,
@@ -303,6 +318,7 @@ function buildAudioPrompt(entries) {
     '각 답변을 직접 듣고 발음·억양·강세, 유창성, 문법, 어휘, 내용 완결성 기준으로 평가해줘.',
     '문항별 점수(0-3 또는 0-5, 기준을 명시)와 0-200 환산 추정 점수, 잘한 점 1가지, 고칠 점은 최대 3가지, 모범 답안을 줘.',
     '어조는 담담하고 구체적으로, 사람 자체나 목소리를 평가하는 표현은 빼고 다음에 바로 고칠 수 있는 행동 위주로 말해줘.',
+    ...ERR_INSTR,
     '',
     '문항 목록:',
     list,
@@ -344,6 +360,7 @@ function buildScoringPrompt(entries) {
     '아래는 TOEIC Speaking 연습 답변이다. 문항별로 문법, 어휘, 내용 완결성, 구성을 평가하고,',
     '문항별 점수(0-3 또는 0-5, 기준을 명시)와 0-200 환산 추정 점수, 고칠 점 3가지, 모범 답안을 줘.',
     '텍스트만 보고 평가하는 것이므로 발음과 억양은 평가에서 제외해.',
+    ...ERR_INSTR,
     '',
     body,
   ].join('\n');
@@ -361,6 +378,25 @@ async function copyText(text) {
     ta.remove();
     return ok;
   }
+}
+
+function parseErrors(text) {
+  const m = text.replace(/[*_`]/g, '').match(/\[오류집계\]([\s\S]*?)(\[\/오류집계\]|$)/);
+  if (!m) return null;
+  const out = {};
+  for (const line of m[1].split('\n')) {
+    const x = line.match(/^\s*[-•]?\s*([^:：\d\s][^:：]*?)\s*[:：]\s*(\d+)/);
+    if (x) out[x[1]] = (out[x[1]] || 0) + Number(x[2]);
+  }
+  return Object.keys(out).length ? out : null;
+}
+
+function topErrors(n = 3, sessions = 10) {
+  const total = {};
+  load(LS.history, []).filter((s) => s.errors).slice(0, sessions).forEach((s) => {
+    for (const [k, v] of Object.entries(s.errors)) total[k] = (total[k] || 0) + v;
+  });
+  return Object.entries(total).sort((a, b) => b[1] - a[1]).slice(0, n);
 }
 
 function reviewView() {
@@ -392,12 +428,24 @@ function reviewView() {
     copyBtn.textContent = ok ? '복사됨. AI 앱에 붙여넣으세요' : '복사 실패';
   } }, '텍스트만 채점 요청 (문구 복사)');
   const shareBtn = h('button', { class: 'btn primary', onclick: () => shareToGemini(results, shareBtn) }, '녹음을 Gemini 앱으로 보내 채점');
+  const paste = h('textarea', { placeholder: 'Gemini 답변 전체를 붙여넣으세요. 끝의 [오류집계] 블록을 읽어 갑니다.' });
+  const pasteMsg = h('div', { class: 'meta' });
+  const pasteBtn = h('button', { class: 'btn', onclick: () => {
+    const errs = parseErrors(paste.value);
+    if (!errs) { pasteMsg.textContent = '[오류집계] 블록을 못 찾았어요. 답변 끝까지 붙여넣었는지 확인해 주세요.'; return; }
+    const hist = load(LS.history, []);
+    const entry = hist.find((x) => x.id === id);
+    if (entry) { entry.errors = errs; entry.feedback = paste.value; save(LS.history, hist); }
+    pasteMsg.textContent = `반영됨: ${Object.entries(errs).map(([k, v]) => `${k} ${v}`).join(', ')}`;
+  } }, '집계에 반영');
   mount(
     h('h1', null, '결과'),
     h('p', { class: 'meta' }, '녹음은 이 화면을 벗어나면 사라집니다. 답변 텍스트는 기록에 남습니다.'),
     cards,
     shareBtn,
     copyBtn,
+    h('h2', null, '피드백 집계'),
+    paste, pasteMsg, pasteBtn,
     h('button', { class: 'btn ghost', onclick: home }, '홈으로'),
   );
 }
@@ -409,6 +457,7 @@ function historyView() {
   const list = hist.length
     ? hist.map((s) => h('details', { class: 'card' },
       h('summary', null, new Date(s.date).toLocaleString('ko-KR'), ` · ${s.items.length}문항`),
+      s.errors && h('div', { class: 'meta' }, Object.entries(s.errors).map(([k, v]) => `${k} ${v}`).join(' · ')),
       s.items.map((it) => h('div', null,
         h('h2', null, `${it.no} · ${TITLE[it.kind]} · ${it.seconds}초`),
         h('div', { class: 'meta' }, it.prompt),
