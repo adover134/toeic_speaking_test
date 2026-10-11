@@ -301,7 +301,8 @@ function buildAudioPrompt(entries) {
   return [
     '첨부한 오디오 파일들은 TOEIC Speaking 연습 답변이야. 파일명(q5, q6 ...)이 문항 번호야.',
     '각 답변을 직접 듣고 발음·억양·강세, 유창성, 문법, 어휘, 내용 완결성 기준으로 평가해줘.',
-    '문항별 점수(0-3 또는 0-5, 기준을 명시)와 0-200 환산 추정 점수, 고칠 점 3가지, 모범 답안을 줘.',
+    '문항별 점수(0-3 또는 0-5, 기준을 명시)와 0-200 환산 추정 점수, 잘한 점 1가지, 고칠 점은 최대 3가지, 모범 답안을 줘.',
+    '어조는 담담하고 구체적으로, 사람 자체나 목소리를 평가하는 표현은 빼고 다음에 바로 고칠 수 있는 행동 위주로 말해줘.',
     '',
     '문항 목록:',
     list,
@@ -381,7 +382,7 @@ function reviewView() {
       h('div', { class: 'meta' }, `${r.no} · ${TITLE[r.kind]} · ${r.seconds}초`),
       r.context && h('div', { class: 'meta' }, r.context),
       h('div', { class: 'q' }, r.prompt),
-      h('audio', { controls: true, src: url }),
+      h('details', null, h('summary', { class: 'meta' }, '내 녹음 듣기 (선택)'), h('audio', { controls: true, preload: 'none', src: url })),
       h('label', null, '답변 텍스트'),
       ta,
     );
